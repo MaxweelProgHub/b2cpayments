@@ -6,9 +6,7 @@
   <title>Saque B2C - SHADEZINX</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
-
     * { box-sizing: border-box; margin: 0; padding: 0; }
-
     body {
       font-family: 'Inter', sans-serif;
       background: #f6f7fb;
@@ -19,7 +17,6 @@
       min-height: 100vh;
       padding: 16px;
     }
-
     .app-container {
       background: #fff;
       padding: 24px;
@@ -30,14 +27,12 @@
       display: flex;
       flex-direction: column;
     }
-
     h2 {
       text-align: center;
       margin-bottom: 20px;
       color: #007bff;
       font-size: 1.4rem;
     }
-
     input {
       padding: 12px;
       margin: 6px 0;
@@ -47,15 +42,12 @@
       background: #fafafa;
       transition: border 0.2s, box-shadow 0.2s;
     }
-
     input:focus {
       outline: none;
       border-color: #007bff;
       box-shadow: 0 0 0 2px rgba(0,123,255,0.2);
     }
-
     input::placeholder { color: #888; }
-
     button {
       padding: 12px;
       margin-top: 15px;
@@ -68,11 +60,7 @@
       cursor: pointer;
       transition: background 0.3s;
     }
-
-    button:hover {
-      background: #0056b3;
-    }
-
+    button:hover { background: #0056b3; }
     .log {
       margin-top: 15px;
       white-space: pre-wrap;
@@ -85,11 +73,9 @@
       line-height: 1.4;
       color: #333;
     }
-
     .log .success { color: #28a745; }
     .log .error { color: #dc3545; }
     .log .info { color: #17a2b8; }
-
     @media (max-width: 480px) {
       .app-container { padding: 16px; }
       h2 { font-size: 1.2rem; }
@@ -100,22 +86,15 @@
 
 <div class="app-container">
   <h2>💸 Saque B2C</h2>
-
-  <!-- Credenciais -->
   <input type="text" id="client_id" placeholder="Client ID" />
   <input type="text" id="client_secret" placeholder="Client Secret" />
   <input type="text" id="wallet_id" placeholder="Wallet ID" />
-
-  <!-- Dados do saque -->
   <input type="text" id="phone" placeholder="Número (9 dígitos)" />
   <input type="number" id="amount" placeholder="Valor (MT)" />
-
   <button id="sacarBtn">Fazer Saque</button>
-
   <div class="log" id="log"></div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script>
 (function() {
   const logDiv = document.getElementById('log');
@@ -136,13 +115,16 @@
       params.append('client_id', client_id);
       params.append('client_secret', client_secret);
 
-      const res = await axios.post('https://e2payments.explicador.co.mz/oauth/token', params, {
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+      const res = await fetch('https://e2payments.explicador.co.mz/oauth/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: params
       });
+      const data = await res.json();
       log('Token gerado com sucesso.', 'success');
-      return res.data.access_token;
+      return data.access_token;
     } catch (err) {
-      log('Erro ao gerar token: ' + JSON.stringify(err.response?.data || err.message), 'error');
+      log('Erro ao gerar token: ' + err.message, 'error');
       return null;
     }
   }
@@ -170,18 +152,22 @@
       amount: amount.toString(),
       reference: "SaqueAplicacao"
     };
-    const headers = {
-      Authorization: `Bearer ${token}`,
-      Accept: 'application/json',
-      'Content-Type': 'application/json'
-    };
 
     log('Enviando requisição de saque...', 'info');
     try {
-      const res = await axios.post(ENDPOINT_URL, payload, { headers });
-      log('✅ Transação concluída:\n' + JSON.stringify(res.data, null, 2), 'success');
+      const res = await fetch(ENDPOINT_URL, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      log('✅ Transação concluída:\n' + JSON.stringify(data, null, 2), 'success');
     } catch (err) {
-      log('❌ Falha na transação:\n' + JSON.stringify(err.response?.data || err.message, null, 2), 'error');
+      log('❌ Falha na transação:\n' + err.message, 'error');
     }
   }
 
