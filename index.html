@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Saque B2C - SHADEZINX</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #f6f7fb;
+      color: #222;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 16px;
+    }
+
+    .app-container {
+      background: #fff;
+      padding: 24px;
+      border-radius: 16px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      display: flex;
+      flex-direction: column;
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #007bff;
+      font-size: 1.4rem;
+    }
+
+    input {
+      padding: 12px;
+      margin: 6px 0;
+      border-radius: 10px;
+      border: 1px solid #ddd;
+      font-size: 15px;
+      background: #fafafa;
+      transition: border 0.2s, box-shadow 0.2s;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: #007bff;
+      box-shadow: 0 0 0 2px rgba(0,123,255,0.2);
+    }
+
+    input::placeholder { color: #888; }
+
+    button {
+      padding: 12px;
+      margin-top: 15px;
+      border-radius: 10px;
+      border: none;
+      font-size: 16px;
+      font-weight: 600;
+      background: #007bff;
+      color: #fff;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    button:hover {
+      background: #0056b3;
+    }
+
+    .log {
+      margin-top: 15px;
+      white-space: pre-wrap;
+      background: #f1f3f6;
+      padding: 12px;
+      border-radius: 10px;
+      max-height: 180px;
+      overflow-y: auto;
+      font-size: 14px;
+      line-height: 1.4;
+      color: #333;
+    }
+
+    .log .success { color: #28a745; }
+    .log .error { color: #dc3545; }
+    .log .info { color: #17a2b8; }
+
+    @media (max-width: 480px) {
+      .app-container { padding: 16px; }
+      h2 { font-size: 1.2rem; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="app-container">
+  <h2>💸 Saque B2C</h2>
+
+  <!-- Credenciais -->
+  <input type="text" id="client_id" placeholder="Client ID" />
+  <input type="text" id="client_secret" placeholder="Client Secret" />
+  <input type="text" id="wallet_id" placeholder="Wallet ID" />
+
+  <!-- Dados do saque -->
+  <input type="text" id="phone" placeholder="Número (9 dígitos)" />
+  <input type="number" id="amount" placeholder="Valor (MT)" />
+
+  <button id="sacarBtn">Fazer Saque</button>
+
+  <div class="log" id="log"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script>
+(function() {
+  const logDiv = document.getElementById('log');
+  const btn = document.getElementById('sacarBtn');
+
+  function log(msg, type="info") {
+    const span = document.createElement('span');
+    span.textContent = msg + '\n';
+    span.className = type;
+    logDiv.appendChild(span);
+    logDiv.scrollTop = logDiv.scrollHeight;
+  }
+
+  async function gerarToken(client_id, client_secret) {
+    try {
+      const params = new URLSearchParams();
+      params.append('grant_type', 'client_credentials');
+      params.append('client_id', client_id);
+      params.append('client_secret', client_secret);
+
+      const res = await axios.post('https://e2payments.explicador.co.mz/oauth/token', params, {
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+      });
+      log('Token gerado com sucesso.', 'success');
+      return res.data.access_token;
+    } catch (err) {
+      log('Erro ao gerar token: ' + JSON.stringify(err.response?.data || err.message), 'error');
+      return null;
+    }
+  }
+
+  async function fazerSaque() {
+    const client_id = document.getElementById('client_id').value.trim();
+    const client_secret = document.getElementById('client_secret').value.trim();
+    const wallet_id = document.getElementById('wallet_id').value.trim();
+    const phone = document.getElementById('phone').value.trim();
+    const amount = document.getElementById('amount').value.trim();
+
+    if (!client_id || !client_secret || !wallet_id || !phone || !amount) {
+      log('Preencha todos os campos!', 'error');
+      return;
+    }
+
+    log('Gerando token...', 'info');
+    const token = await gerarToken(client_id, client_secret);
+    if (!token) return;
+
+    const ENDPOINT_URL = `https://e2payments.explicador.co.mz/v1/b2c/mpesa-payment/${wallet_id}`;
+    const payload = {
+      client_id,
+      phone,
+      amount: amount.toString(),
+      reference: "SaqueAplicacao"
+    };
+    const headers = {
+      Authorization: `Bearer ${token}`,
+      Accept: 'application/json',
+      'Content-Type': 'application/json'
+    };
+
+    log('Enviando requisição de saque...', 'info');
+    try {
+      const res = await axios.post(ENDPOINT_URL, payload, { headers });
+      log('✅ Transação concluída:\n' + JSON.stringify(res.data, null, 2), 'success');
+    } catch (err) {
+      log('❌ Falha na transação:\n' + JSON.stringify(err.response?.data || err.message, null, 2), 'error');
+    }
+  }
+
+  btn.addEventListener('click', fazerSaque);
+})();
+</script>
+
+</body>
+</html>
